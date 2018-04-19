@@ -4,8 +4,6 @@
 #include <string.h>  /* for strdup */
 #include "scanner.h"
 
-static int debug = 0 ;
-
 static void *allocateMsg(size_t size, char *where);
 
 static void *reallocateMsg(void *s, size_t size, char *where);
@@ -62,6 +60,7 @@ static void *reallocateMsg(void *s, size_t size, char *where);
 
 static void skipWhiteSpace(FILE *);
 
+static char convertEscapedChar(int);
 
 /********** public functions **********************/
 
@@ -156,8 +155,6 @@ readString(FILE *fp) {
 
     /* toss the double quote, skip to the next character */
 
-    skipWhiteSpace(fp);
-
     ch = fgetc(fp);
 
     /* initialize the buffer index */
@@ -167,7 +164,6 @@ readString(FILE *fp) {
     /* collect characters until the closing double quote */
 
     while (ch != '\"') {
-        if(debug) printf("_scanner : readString -  Index is : %d.\n", index);
         if (ch == EOF) {
             fprintf(stderr, "SCAN ERROR: attempt to read a string failed\n");
             fprintf(stderr, "no closing double quote\n");
@@ -177,36 +173,24 @@ readString(FILE *fp) {
             ++size;
             buffer = reallocateMsg(buffer, size, "readString");
         }
+
         if (ch == '\\') {
             ch = fgetc(fp);
-
-            /*   commented out because it only needs to be alpha characters    */
-
-        } else {
-            //if it is an alpha character, add it's lowercase to the buffer
-            if (isalpha(ch)) {
-                if (debug) printf("_scanner : readString -  adding '%c' to string\n", tolower(ch));
-                buffer[index] = tolower(ch);
-                index++;
-            } else if (isspace(ch)) {
-                if(index > 0) {
-                    if(index > 0 && !isspace(buffer[index-1])){
-                        if (debug) printf("_scanner : readString -  adding '%c' to string\n", tolower(ch));
-                        buffer[index] = tolower(ch);
-                        index++;
-                    }
-                }
-                skipWhiteSpace(fp);
+            if (ch == EOF) {
+                fprintf(stderr, "SCAN ERROR: attempt to read a string failed\n");
+                fprintf(stderr, "escaped character missing\n");
+                exit(6);
             }
-        }
+            buffer[index] = convertEscapedChar(ch);
+        } else
+            buffer[index] = ch;
+        ++index;
         ch = fgetc(fp);
     }
-    if(index > 0 && isspace(buffer[index - 1])) index--;
+
     buffer[index] = '\0';
-    if(debug) printf("_scanner : readString -  returning characters. Index was %d. String was [%s]\n", index, buffer);
+
     return buffer;
-
-
 }
 
 char *
@@ -229,11 +213,8 @@ readToken(FILE *fp) {
             ++size;
             buffer = reallocateMsg(buffer, size, "readToken");
         }
-        if (isalpha(ch)) {
-            if (debug) printf("_scanner : readToken -  adding '%c' to string\n", tolower(ch));
-            buffer[index] = tolower(ch);
-            index++;
-        }
+        buffer[index] = ch;
+        ++index;
         ch = fgetc(fp);
     }
 
@@ -306,6 +287,21 @@ skipWhiteSpace(FILE *fp) {
     /* a non-space character got us out of the loop, so push it back */
 
     if (ch != EOF) ungetc(ch, fp);
+}
+
+static char
+convertEscapedChar(int ch) {
+    switch (ch) {
+        case 'n':
+            return '\n';
+        case 't':
+            return '\t';
+        case '"':
+            return '\"';
+        case '\\':
+            return '\\';
+    }
+    return ch;
 }
 
 

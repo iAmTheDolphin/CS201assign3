@@ -21,8 +21,7 @@
 #define dprintf(...)
 #endif
 
-struct vertex
-{
+struct vertex {
     int number;                     //vertex identifier
     DLL *neighbors;                 //the adjacency list
     DLL *weights;                   //the adjacency list
@@ -39,22 +38,24 @@ struct vertex
 /*** constructors/desctructors ***/
 
 VERTEX *
-newVERTEX(int n)
-{
+newVERTEX(int n) {
     VERTEX *v = malloc(sizeof(VERTEX));
     assert(v != 0);
     v->number = n;
     v->key = -1;
     v->flag = 0;
-    v->neighbors = newDLL(displayVERTEX,0);
-    v->weights = newDLL(displayINTEGER,freeINTEGER);
-    v->successors = newDLL(displayVERTEX,0);
+    v->neighbors = newDLL(displayVERTEX, 0);
+    v->weights = newDLL(displayINTEGER, freeINTEGER);
+    v->successors = newDLL(displayVERTEX, 0);
+
+    dprintf("_vertex : newVERTEX -  new Vertex with value %d\n", n);
+
     return v;
 }
 
+
 void
-freeVERTEX(void *w)
-{
+freeVERTEX(void *w) {
     VERTEX *v = w;
     freeDLL(v->neighbors);
     freeDLL(v->weights);
@@ -64,75 +65,77 @@ freeVERTEX(void *w)
 /*** accessors *******************/
 
 int getVERTEXnumber(VERTEX *v) { return v->number; }
+
 int getVERTEXflag(VERTEX *v) { return v->flag; }
+
 void *getVERTEXowner(VERTEX *v) { return v->owner; }
+
 VERTEX *getVERTEXpred(VERTEX *v) { return v->pred; }
+
 int getVERTEXkey(VERTEX *v) { return v->key; }
+
 DLL *getVERTEXneighbors(VERTEX *v) { return v->neighbors; }
+
 DLL *getVERTEXweights(VERTEX *v) { return v->weights; }
+
 DLL *getVERTEXsuccessors(VERTEX *v) { return v->successors; }
 
 /*** mutators ********************/
 
-void *
-setVERTEXowner(VERTEX *v,void *o)
-{
+void *setVERTEXowner(VERTEX *v, void *o) {
     void *temp = v->owner;
     v->owner = o;
     return temp;
 }
 
 int
-setVERTEXflag(VERTEX *v,int f)
-{
+setVERTEXflag(VERTEX *v, int f) {
     int temp = v->flag;
     v->flag = f;
     return temp;
 }
 
 VERTEX *
-setVERTEXpred(VERTEX *v,VERTEX *p)
-{
+setVERTEXpred(VERTEX *v, VERTEX *p) {
     VERTEX *temp = v->pred;
     v->pred = p;
     return temp;
 }
 
 int
-setVERTEXkey(VERTEX *v,int k)
-{
+setVERTEXkey(VERTEX *v, int k) {
     int temp = v->key;
     v->key = k;
     return temp;
 }
 
 void
-insertVERTEXneighbor(VERTEX *v,VERTEX *w)
-{
-    insertDLL(v->neighbors,sizeDLL(v->neighbors),w);
+insertVERTEXneighbor(VERTEX *v, VERTEX *w) {
+    insertDLL(v->neighbors, sizeDLL(v->neighbors), w);
 }
 
 void
-insertVERTEXweight(VERTEX *v,int i)
-{
-    insertDLL(v->weights,sizeDLL(v->weights),newINTEGER(i));
+insertVERTEXweight(VERTEX *v, int i) {
+    insertDLL(v->weights, sizeDLL(v->weights), newINTEGER(i));
 }
 
 void
-insertVERTEXsuccessor(VERTEX *v,VERTEX *w)
-{
-    insertDLL(v->successors,sizeDLL(v->successors),w);
+insertVERTEXsuccessor(VERTEX *v, VERTEX *w) {
+    insertDLL(v->successors, sizeDLL(v->successors), w);
 }
 
 /*** informational ***************/
 
 int
-compareVERTEX(void *a,void *b)
-{
+compareVERTEX(void *a, void *b) {
+
+    if(!a)return -1;
+    if(!b)return 1;
+
     VERTEX *x = a;
     VERTEX *y = b;
 
-    dprintf("comparing vertex %d with vertex %d\n",x->number,y->number);
+    dprintf("_vertex : compareVERTEX -  comparing vertex %d with vertex %d\n", x->number, y->number);
 
     if (x->key == -1 && y->key != -1)
         return 1;
@@ -149,17 +152,16 @@ compareVERTEX(void *a,void *b)
 /*** visualizers *****************/
 
 void
-displayVERTEX(void *w,FILE *fp)
-{
+displayVERTEX(void *w, FILE *fp) {
     VERTEX *v = w;
-    fprintf(fp,"%d",v->number);
+    assert(v != 0);
+    fprintf(fp, "%d", v->number);
 }
 
 void
-displayVERTEXdebug(void *v,FILE *fp)
-{
+displayVERTEXdebug(void *v, FILE *fp) {
     VERTEX *a = v;
-    fprintf(fp,"%d:",a->number);
-    displayDLL(a->neighbors,fp);
-    displayDLL(a->weights,fp);
+    fprintf(fp, "%d:", a->number);
+    displayDLL(a->neighbors, fp);
+    displayDLL(a->weights, fp);
 }

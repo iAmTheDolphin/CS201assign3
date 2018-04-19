@@ -1,4 +1,4 @@
-OBJS = bst.o prim.o integer.o queue.o sll.o stack.o dll.o real.o scanner.o string.o gst.o avl.o
+OBJS = bst.o prim.o integer.o queue.o sll.o stack.o dll.o real.o scanner.o string.o gst.o avl.o vertex.o edge.o binomial.o
 OOPTS = -Wall -Wextra -std=c99 -g -c
 LOPTS = -Wall -Wextra -g
 EXEC = ./prim testfile
@@ -10,6 +10,15 @@ prim : $(OBJS)
 
 string.o : string.c string.h
 		gcc $(OOPTS) string.c
+
+binomial.o : binomial.c binomial.h dll.o vertex.o
+		gcc $(OOPTS) binomial.c
+
+vertex.o : vertex.c vertex.h dll.o
+		gcc $(OOPTS) vertex.c
+
+edge.o : edge.c edge.h
+		gcc $(OOPTS) edge.c
 
 scanner.o : scanner.c scanner.h
 		gcc $(OOPTS) scanner.c

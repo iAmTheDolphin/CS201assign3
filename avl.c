@@ -90,7 +90,6 @@ static void displayAVLNODE(void *n, FILE *fp) {
 }
 
 static int compareAVLNODE(void *v, void *w) {
-
     if (w && v)return ((AVLNODE *) v)->compare(getAVLNODEvalue(v), getAVLNODEvalue(w));
     else if (w) return -1;
     else if (v) return 1;
@@ -471,6 +470,8 @@ static void fixupAVL(BSTNODE *b) {
         }
     }
 }
+
+
 
 static void deleteAVLfixup(BSTNODE *b) {
 
