@@ -36,8 +36,8 @@ void *dequeue(QUEUE *queue) {
 }
 
 void *peekQUEUE(QUEUE *queue) {
+    assert(sizeQUEUE(queue) > 0);
     void *value = getSLL(queue->items, 0);
-    assert(value != 0);
     return value;
 }
 

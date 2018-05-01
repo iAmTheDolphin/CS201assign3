@@ -48,7 +48,7 @@ newVERTEX(int n) {
     v->weights = newDLL(displayINTEGER, freeINTEGER);
     v->successors = newDLL(displayVERTEX, 0);
 
-    dprintf("_vertex : newVERTEX -  new Vertex with value %d\n", n);
+    //dprintf("_vertex : newVERTEX -  new Vertex with value %d\n", n);
 
     return v;
 }
@@ -104,6 +104,7 @@ setVERTEXpred(VERTEX *v, VERTEX *p) {
 
 int
 setVERTEXkey(VERTEX *v, int k) {
+    dprintf("_vertex : setVERTEXkey -  setting key of %d from %d to %d\n", v->number, v->key, k );
     int temp = v->key;
     v->key = k;
     return temp;
@@ -112,6 +113,13 @@ setVERTEXkey(VERTEX *v, int k) {
 void
 insertVERTEXneighbor(VERTEX *v, VERTEX *w) {
     insertDLL(v->neighbors, sizeDLL(v->neighbors), w);
+    /*if(DEBUG) {
+        printf("_vertex : insertVertexNeighbor -  after insert, list of ");
+        displayVERTEX(v, stdout);
+        printf(" is ");
+        displayDLL(v->neighbors, stdout);
+        printf("\n");
+    }*/
 }
 
 void
@@ -135,8 +143,6 @@ compareVERTEX(void *a, void *b) {
     VERTEX *x = a;
     VERTEX *y = b;
 
-    dprintf("_vertex : compareVERTEX -  comparing vertex %d with vertex %d\n", x->number, y->number);
-
     if (x->key == -1 && y->key != -1)
         return 1;
     else if (x->key != -1 && y->key == -1)
@@ -156,6 +162,9 @@ displayVERTEX(void *w, FILE *fp) {
     VERTEX *v = w;
     assert(v != 0);
     fprintf(fp, "%d", v->number);
+    if(DEBUG) {
+        fprintf(fp, "{%d}", v->key);
+    }
 }
 
 void

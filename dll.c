@@ -11,6 +11,12 @@ struct node {
     NODE *last;
 };
 
+
+
+
+
+
+
 static NODE *newNODEdll(void *v, NODE *n, NODE *l) {
     NODE *p = malloc(sizeof(NODE));
     if (p == 0) {
@@ -25,7 +31,9 @@ static NODE *newNODEdll(void *v, NODE *n, NODE *l) {
 
 /* accessors */
 
-static void *getNODEvalue(NODE *n) { return n->value; }
+static void *getNODEvalue(NODE *n) {
+    return n->value;
+}
 
 static NODE *getNODEnext(NODE *n) { return n->next; }
 
@@ -37,7 +45,9 @@ static void setNODEvalue(NODE *n, void *v) { n->value = v; }
 
 static void setNODEnext(NODE *n, NODE *p) { n->next = p; }
 
-static void setNODElast(NODE *n, NODE *p) { n->last = p; }
+static void setNODElast(NODE *n, NODE *p) {
+    n->last = p;
+}
 
 /* visualizers */
 /*
@@ -94,6 +104,39 @@ DLL *newDLL(void (*d)(void *, FILE *), void (*f)(void *)) {
     return items;
 }
 
+
+
+void firstDLL(DLL *items) {
+    items->iterator = items->head;
+}
+
+void lastDLL(DLL *items) {
+    items->iterator = items->tail;
+}
+
+int moreDLL(DLL *items) {
+    if(items->iterator) return 1;
+    else return 0;
+}
+
+void nextDLL(DLL *items) {
+    items->iterator = items->iterator->next;
+}
+
+void prevDLL(DLL *items) {
+    items->iterator = items->iterator->last;
+}
+
+void *currentDLL(DLL *items) {
+    NODE *currNode = items->iterator;
+    //int n = &currNode;
+    //n = n << 2;
+    if(currNode)return currNode->value;
+    else return 0;
+}
+
+
+
 /*
 //getting the node before the index passed in is an arifact from
 //when I wrote SLL and brought it over. while it is not the most
@@ -123,6 +166,7 @@ void *insertDLL(DLL *items, int index, void *value) {
     if (debugDLL) printf("_DLL - inserting into DLL at index %d\n", index);
     assert(index <= items->size);
     assert(index >= 0);
+    assert(items->size >=0);
     NODE *n;
     if (items->size == 0) {
         n = newNODEdll(value, 0, 0);
@@ -149,6 +193,7 @@ void *insertDLL(DLL *items, int index, void *value) {
                                  "insertion : %d\n", items->size);
     return n;
 }
+
 
 void *removeDLL(DLL *items, int index) {
     assert(index < items->size);
@@ -229,6 +274,7 @@ void *setDLL(DLL *items, int index, void *value) {
 }
 
 int sizeDLL(DLL *items) {
+    assert(items->size >= 0);
     return items->size;
 }
 
@@ -254,6 +300,7 @@ void displayDLLdebug(DLL *items, FILE *fp) {
 }
 
 void freeDLL(DLL *items) {
+    assert(items->size >= 0);
     NODE *n = items->head;
     NODE *next = 0;
     if (items->size > 1) next = getNODEnext(n);
@@ -263,7 +310,7 @@ void freeDLL(DLL *items) {
         n = next;
         if (n != 0)next = getNODEnext(n);
     }
-    free((DLL *) items);
+    free(items);
 }
 
 void removeDLLall(DLL *items) {
@@ -278,8 +325,12 @@ void removeDLLall(DLL *items) {
     items->tail = 0;
 }
 
-void *removeDLLnode(DLL *items, void *node) {
-    NODE *n = node;
+
+
+void *removeDLLnode(DLL *items, void *v) {
+
+    NODE *n = v;
+    assert(n != 0);
     NODE *last = getNODElast(n);
     NODE *next = getNODEnext(n);
     void *value = getNODEvalue(n);
@@ -301,33 +352,6 @@ void *removeDLLnode(DLL *items, void *node) {
     items->size--;
     if (debugDLL) printf("_DLL - removed item: remaining "
                                  "items: %d\n", items->size);
-
     return value;
 }
 
-
-void firstDLL(DLL *items) {
-    items->iterator = items->head;
-}
-
-void lastDLL(DLL *items) {
-    items->iterator = items->tail;
-}
-
-int moreDLL(DLL *items) {
-    if(items->iterator) return 1;
-    else return 0;
-}
-
-void nextDLL(DLL *items) {
-    items->iterator = items->iterator->next;
-}
-
-void prevDLL(DLL *items) {
-    items->iterator = items->iterator->last;
-}
-
-void *currentDLL(DLL *items) {
-    NODE *currNode = items->iterator;
-    return currNode->value;
-}

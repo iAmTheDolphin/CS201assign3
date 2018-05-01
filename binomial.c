@@ -39,8 +39,9 @@ static void consolodate(BINOMIAL *b);
 struct binomialNode {
 
     BINOMIALNODE *parent;
-    DLL *children;
-    void *value;
+    DLL *children; //freed
+    void *value;    //freed
+    void *owner;
 
     void (*display)(void *, FILE *);
 
@@ -67,6 +68,22 @@ struct binomial {
 };
 
 
+static void destructiveFreeBINOMIALNODE(void *b) {
+    BINOMIALNODE *node = b;
+    if (DEBUG) {
+        printf("_binomial : dFBN -  freeing ");
+        displayBINOMIALNODE(node, stdout);
+        printf("\n");
+    }
+
+
+    freeDLL(node->children);
+
+    node->free(node->value);
+    free(node);
+}
+
+
 BINOMIALNODE *newBINOMIALNODE(void (*display)(void *, FILE *),
                               int (*compare)(void *, void *),
                               void (*free)(void *),
@@ -77,7 +94,7 @@ BINOMIALNODE *newBINOMIALNODE(void (*display)(void *, FILE *),
     b->display = display;
     b->compare = compare;
     b->free = free;
-    b->children = newDLL(displayBINOMIALNODE, free);
+    b->children = newDLL(displayBINOMIALNODE, destructiveFreeBINOMIALNODE);
 
     if (DEBUG) {
         printf("_binomialNode : newBINOMIALNODE -  Created BinomialNode with value ");
@@ -88,8 +105,9 @@ BINOMIALNODE *newBINOMIALNODE(void (*display)(void *, FILE *),
     return b;
 }
 
+
 static void freeBINOMIALNODE(BINOMIALNODE *b, void (*freer)(void *)) {
-    freeDLL(b->children);
+    if (b->children)freeDLL(b->children);
     if (freer) freer(b->value);
     free(b);
 }
@@ -100,6 +118,7 @@ static void displayBINOMIALNODE(void *node, FILE *fp) {
     void *value = n->value;
     n->display(value, fp);
     dprintf("[%d]", sizeDLL(n->children));
+
 }
 
 
@@ -112,7 +131,7 @@ BINOMIAL *newBINOMIAL(
 
     BINOMIAL *b = malloc(sizeof(BINOMIAL));
 
-    b->rootlist = newDLL(displayBINOMIALNODE, free);
+    b->rootlist = newDLL(displayBINOMIALNODE, destructiveFreeBINOMIALNODE);
 
     b->display = display;
     b->compare = compare;
@@ -124,14 +143,39 @@ BINOMIAL *newBINOMIAL(
     return b;
 }
 
+
+
+
+
 //done
 static BINOMIALNODE *bubbleUp(BINOMIAL *b, BINOMIALNODE *n) {
     BINOMIALNODE *p = n->parent;
+    if(DEBUG){
+        displayBINOMIALdebug(b, stdout);
+    }
+
+    if (DEBUG) {
+        dprintf("_binomial : bubbleUp -  bubbling \n");
+        displayBINOMIALNODE(n, stdout);
+        dprintf(" up to ");
+        if (p) displayBINOMIALNODE(p, stdout);
+        else printf(" NO PARENT");
+        printf("\n");
+    }
+
     if (n->parent == 0) {
-        if (b->compare(n->value, b->extreme->value) >= 0) b->extreme = n->value;
+        if (b->compare(n->value, b->extreme->value) <= 0) {
+            if(DEBUG) {
+                dprintf("_%d binomial : bubbleUp -  Extreme value updated to ", __LINE__);
+                displayBINOMIALNODE(n, stdout);
+                printf("\n");
+            }
+            b->extreme = n;
+        }
+
         return n;
     }
-    if (b->compare(n->value, p->value) <= 0) return n;
+    if (b->compare(n->value, p->value) >= 0) return n;
     if (b->update) b->update(n->value, p);
     if (b->update) b->update(p->value, n);
     void *temp = n->value;
@@ -151,7 +195,7 @@ static BINOMIALNODE *combine(BINOMIAL *b, BINOMIALNODE *x, BINOMIALNODE *y) {
             displayBINOMIALNODE(x, stdout);
             printf("\n");
         }
-        insertDLL(x->children, 0, y);
+        insertDLL(x->children, sizeDLL(x->children), y);
         y->parent = x;
         return x;
     } else {
@@ -162,32 +206,12 @@ static BINOMIALNODE *combine(BINOMIAL *b, BINOMIALNODE *x, BINOMIALNODE *y) {
             displayBINOMIALNODE(y, stdout);
             printf("\n");
         }
-        insertDLL(y->children, 0, x);
+        insertDLL(y->children, sizeDLL(y->children), x);
         x->parent = y;
         return y;
     }
 }
 
-/*
-
-static void updateConsolodationArray(BINOMIALNODE *consolodationArray[], BINOMIALNODE *node, BINOMIAL *b) {
-
-    int degree = sizeDLL(node->children);
-    while (consolodationArray[degree] != 0) {
-        if (DEBUG) {
-            dprintf("_binomial : updateConsolodationArray -  collision detected. combining X:");
-            displayBINOMIALNODE(node, stdout);
-            printf(" and Y:");
-            displayBINOMIALNODE(consolodationArray[degree], stdout);
-            printf("\n");
-        }
-        combine(b, node, consolodationArray[degree]);
-        consolodationArray[degree] = 0;
-        degree++;
-    }
-    consolodationArray[degree] = node;
-}
-*/
 
 //done?
 static void consolodate(BINOMIAL *b) {
@@ -249,6 +273,11 @@ static void consolodate(BINOMIAL *b) {
             insertDLL(b->rootlist, sizeDLL(b->rootlist), consolodationArray[i]);
             //if extreme is null or if consolodationArray[i] is more extreme
             if (!b->extreme || b->compare(b->extreme->value, consolodationArray[i]->value) > 0) {
+                if(DEBUG) {
+                    dprintf("_binomial : consolodate -  Extreme value updated to ");
+                    displayBINOMIALNODE(consolodationArray[i], stdout);
+                    printf("\n");
+                }
                 b->extreme = consolodationArray[i];
             }
         }
@@ -267,7 +296,7 @@ void *insertBINOMIAL(BINOMIAL *b, void *value) {
         dprintf("\n");
     }
 
-    insertDLL(b->rootlist, sizeDLL(b->rootlist), n);
+    n->owner = insertDLL(b->rootlist, sizeDLL(b->rootlist), n);
 
     b->size++;
 
@@ -301,8 +330,6 @@ void unionBINOMIAL(BINOMIAL *a, BINOMIAL *b) {
     unionDLL(a->rootlist, b->rootlist);
     a->size += b->size;
 
-    b->extreme = 0;
-
     consolodate(a);
 }
 
@@ -317,16 +344,26 @@ void deleteBINOMIAL(BINOMIAL *b, void *node) {
 
 //done?
 void decreaseKeyBINOMIAL(BINOMIAL *b, void *node, void *value) {
-    dprintf("_binomial : decreaseKeyBINOMIAL -  \n");
+    dprintf("_binomial : decreaseKeyBINOMIAL -  decreasing \n");
     BINOMIALNODE *n = (BINOMIALNODE *) node;
+
+    if (DEBUG) {
+        displayBINOMIALNODE(n, stdout);
+        printf("\n");
+    }
 
     n->value = value;
     bubbleUp(b, n);
 }
 
+
 //done
 void *peekBINOMIAL(BINOMIAL *b) {
-    dprintf("_binomial : peekBINOMIAL -  \n");
+    if (DEBUG) {
+        printf("_binomial : peekBINOMIAL -  peeking ");
+        displayBINOMIALNODE(b->extreme, stdout);
+        printf("\n");
+    }
     return b->extreme->value;
 }
 
@@ -337,7 +374,7 @@ void *extractBINOMIAL(BINOMIAL *b) {
     BINOMIALNODE *y = b->extreme;
     firstDLL(b->rootlist);
     //removes the extreme value from the root list
-    for (int i = 0; sizeDLL(b->rootlist); i++) {
+    for (int i = 0; i < sizeDLL(b->rootlist); i++) {
         if (currentDLL(b->rootlist)) {
             if (b->compare(y->value, ((BINOMIALNODE *) currentDLL(b->rootlist))->value) == 0) {
                 removeDLL(b->rootlist, i);
@@ -347,17 +384,27 @@ void *extractBINOMIAL(BINOMIAL *b) {
         nextDLL(b->rootlist);
     }
 
+    if(DEBUG){
+        printf("_binomial : extractBinomial -  extracted ");
+        b->display(y->value, stdout);
+        printf("\n");
+    }
 
-    //sets the parent of each of them to 0
+    //sets the parent of each of the children to 0
     firstDLL(y->children);
-    for (int i = 0; i < sizeDLL(y->children); i++) {
+    while (moreDLL(y->children)) {
         BINOMIALNODE *currnode = currentDLL(y->children);
         currnode->parent = 0;
         nextDLL(y->children);
     }
 
 
-    unionDLL(b->rootlist, y->children);
+    //unionDLL(b->rootlist, y->children);
+    unionDLL(y->children, b->rootlist);
+    freeDLL(b->rootlist);
+    b->rootlist = y->children;
+    y->children = newDLL(displayBINOMIALNODE, destructiveFreeBINOMIALNODE);
+
     consolodate(b);
 
     b->size--;
@@ -389,34 +436,36 @@ void statisticsBINOMIAL(BINOMIAL *b, FILE *fp) {
 
 
 void displayBINOMIAL(BINOMIAL *b, FILE *fp) {
+    if (b->size != 0) {
+        int size = (int) (log(b->size) / log(2) + 0.000001) + 1;
+        BINOMIALNODE *nodeList[size];
 
-    int size = (int) (log(b->size) / log(2) + 0.000001) + 1;
-    BINOMIALNODE *nodeList[size];
+        //initialize it to 0
+        for (int x = 0; x < size; x++) { nodeList[x] = 0; }
 
-    //initialize it to 0
-    for (int x = 0; x < size; x++) { nodeList[x] = 0; }
-
-    dprintf("_binomial : displayBINOMIAL -  \n");
-    firstDLL(b->rootlist);
-    for (int x = 0; x < sizeDLL(b->rootlist); x++) {
-        BINOMIALNODE *n = currentDLL(b->rootlist);
-        nodeList[sizeDLL(n->children)] = n;
-        nextDLL(b->rootlist);
-    }
-    firstDLL(b->rootlist);
-
-    printf("rootlist: ");
-
-    for (int x = 0; x < size; x++) {
-        if (nodeList[x]) {
-            displayBINOMIALNODE(nodeList[x], fp);
-            if (b->compare(nodeList[x]->value, b->extreme->value) == 0) printf("*");
-        } else {
-            printf("NULL");
+        dprintf("_binomial : displayBINOMIAL -  \n");
+        firstDLL(b->rootlist);
+        while (moreDLL(b->rootlist)) {
+            BINOMIALNODE *n = currentDLL(b->rootlist);
+            nodeList[sizeDLL(n->children)] = n;
+            nextDLL(b->rootlist);
         }
-        if (x != size - 1) printf(" ");
+        firstDLL(b->rootlist);
+
+        printf("rootlist: ");
+
+        for (int x = 0; x < size; x++) {
+            if (nodeList[x]) {
+                displayBINOMIALNODE(nodeList[x], fp);
+                if (b->compare(nodeList[x]->value, b->extreme->value) == 0) printf("*");
+            } else {
+                printf("NULL");
+            }
+            if (x != size - 1) printf(" ");
+        }
+        printf("\n");
     }
-    printf("\n");
+    else printf("EMPTY\n");
 }
 
 
@@ -426,6 +475,7 @@ static void enqueueDLL(QUEUE *items, DLL *list) {
         enqueue(items, currentDLL(list));
         nextDLL(list);
     }
+    if (sizeDLL(list))enqueue(items, NULL);
     firstDLL(list);
 }
 
@@ -446,17 +496,23 @@ void displayBINOMIALdebug(BINOMIAL *b, FILE *fp) {
 
             BINOMIALNODE *n = dequeue(items);
 
-            displayBINOMIALNODE(n, fp);
+            if (n) {
+                displayBINOMIALNODE(n, fp);
 
-            enqueueDLL(items, n->children);
+                if (peekQUEUE(items))printf(",");
 
+                enqueueDLL(items, n->children);
+
+            } else {
+                printf("}}");
+                if (nodes > 1) printf("{{");
+            }
             nodes--;
 
-            if (nodes != 0)printf(",");
         }
 
         nodes = sizeQUEUE(items);
-        printf("}}\n");
+        printf("\n");
     }
     freeQUEUE(items);
 }
@@ -465,5 +521,9 @@ void displayBINOMIALdebug(BINOMIAL *b, FILE *fp) {
 void freeBINOMIAL(BINOMIAL *b) {
     dprintf("_binomial : freeBINOMIAL -  \n");
 
-}
 
+    freeDLL(b->rootlist);
+
+    free(b);
+
+}

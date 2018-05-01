@@ -6,12 +6,12 @@ EXEC = ./prim testfile
 all : prim
 
 prim : $(OBJS)
-		gcc $(LOPTS) $(OBJS) -o prim
+		gcc $(LOPTS) $(OBJS) -o prim -lm
 
 string.o : string.c string.h
 		gcc $(OOPTS) string.c
 
-binomial.o : binomial.c binomial.h dll.o vertex.o
+binomial.o : binomial.c binomial.h dll.o 
 		gcc $(OOPTS) binomial.c
 
 vertex.o : vertex.c vertex.h dll.o
